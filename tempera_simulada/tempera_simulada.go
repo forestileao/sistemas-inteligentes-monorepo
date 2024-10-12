@@ -49,7 +49,7 @@ func resfriar(temperaturaAtual, fatorResfriamento float64) float64 {
 
 func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int, temperaturaInicial, fatorResfriamento float64) []int {
 	temperaturaAtual := temperaturaInicial
-	solucao := []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	solucao := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
