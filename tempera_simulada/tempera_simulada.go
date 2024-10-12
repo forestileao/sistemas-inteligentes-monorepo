@@ -139,6 +139,6 @@ func main() {
 
 	valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
 
-	fmt.Printf("\nValor total do arranjo = %d\n", valor)
-	fmt.Printf("Tamanho total do arranjo = %d\n", tamanho)
+	fmt.Printf("\nValor total da solucao = %d\n", valor)
+	fmt.Printf("Tamanho total da solucao = %d\n", tamanho)
 }
