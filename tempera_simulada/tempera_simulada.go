@@ -49,13 +49,12 @@ func resfriar(temperaturaAtual, fatorResfriamento float64) float64 {
 
 func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int, temperaturaInicial, fatorResfriamento float64) []int {
 	temperaturaAtual := temperaturaInicial
-	solucao := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	solucao := []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
 	}
 	valorAtual, _ := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
-	intervalo := 1000 / 10
 
 	fmt.Printf("\n%-15s %-15s %-15s\n", "Iteração", "Valor Atual", "Temperatura")
 	fmt.Println("-----------------------------------------")
@@ -67,6 +66,7 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 
 		delta_e := valorAdjacente - valorAtual
 
+		// Se a solução adjacente for melhor, será aceita
 		if delta_e > 0 {
 			solucao = arranjoAdjacente
 			valorAtual = valorAdjacente
@@ -79,7 +79,7 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 			}
 		}
 
-		if iteracao%intervalo == 0 {
+		if iteracao%100 == 0 {
 			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperaturaAtual)
 		}
 
@@ -104,15 +104,15 @@ func printTabela(valores, tamanhos []int, arranjo []int) {
 func main() {
 	valores := []int{95, 75, 60, 85, 40, 120, 30, 65, 50, 90}
 	tamanhos := []int{50, 40, 30, 55, 25, 60, 35, 45, 40, 50}
-	tamanhoMaximo := 300
+	tamanhoMaximo := 250
 
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
-	var temperaturaInicial float64 = 1000
-	fatorResfriamento := 0.99
+	var temperaturaInicial float64 = 12400
+	fatorResfriamento := 0.98
 
 	fmt.Printf("Tamanho máximo da mochila = %d\n", tamanhoMaximo)
 	fmt.Printf("Temperatura inicial = %.1f\n", temperaturaInicial)
-	fmt.Printf("Alfa = %.2f\n", fatorResfriamento)
+	fmt.Printf("Fator de Resfriamento = %.2f\n", fatorResfriamento)
 
 	fmt.Println("\nInício da demonstração de têmpera simulada com mochila")
 
