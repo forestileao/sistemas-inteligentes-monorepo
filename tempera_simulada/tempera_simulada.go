@@ -134,7 +134,7 @@ func main() {
 	printTabela(valores, tamanhos, make([]int, len(valores)))
 
 	solucao := temperaSimulada(10, aleatorio, valores, tamanhos, tamanhoMaximo, temperaturaInicial, fatorResfriamento)
-	fmt.Println("\n\nArranjo encontrado:")
+	fmt.Println("\n\nSolução encontrada:")
 	printTabela(valores, tamanhos, solucao)
 
 	valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
