@@ -50,11 +50,13 @@ func resfriar(temperaturaAtual, fatorResfriamento float64) float64 {
 func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int, temperaturaInicial, fatorResfriamento float64) []int {
 	temperaturaAtual := temperaturaInicial
 	solucao := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	melhorSolucao := solucao
 
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
 	}
 	valorAtual, _ := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
+	valorMelhorSolucao := valorAtual
 
 	fmt.Printf("\n%-15s %-15s %-15s\n", "Iteração", "Valor Atual", "Temperatura")
 	fmt.Println("-----------------------------------------")
@@ -70,23 +72,35 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 		if delta_e > 0 {
 			solucao = arranjoAdjacente
 			valorAtual = valorAdjacente
+
+			if valorAtual > valorMelhorSolucao {
+				melhorSolucao = solucao
+				valorMelhorSolucao = valorAtual
+			}
+
 		} else {
 			probAceitar := math.Exp(float64(delta_e) / temperaturaAtual)
 
 			if rand.Float64() < probAceitar {
 				solucao = arranjoAdjacente
 				valorAtual = valorAdjacente
+
+				if valorAtual > valorMelhorSolucao {
+					melhorSolucao = solucao
+					valorMelhorSolucao = valorAtual
+				}
 			}
 		}
 
-		if iteracao%100 == 0 {
+		if iteracao%10 == 0 {
 			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperaturaAtual)
 		}
 
 		temperaturaAtual = resfriar(temperaturaAtual, fatorResfriamento)
+
 	}
 
-	return solucao
+	return melhorSolucao
 }
 
 func printTabela(valores, tamanhos []int, arranjo []int) {
@@ -107,7 +121,7 @@ func main() {
 	tamanhoMaximo := 250
 
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
-	var temperaturaInicial float64 = 12400
+	var temperaturaInicial float64 = 10_000
 	fatorResfriamento := 0.98
 
 	fmt.Printf("Tamanho máximo da mochila = %d\n", tamanhoMaximo)
