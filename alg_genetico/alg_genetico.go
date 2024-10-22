@@ -97,7 +97,7 @@ func selecionarMelhores(populacao [][]int, valores, tamanhos []int, tamanhoMaxim
 		return individuos[i].valor > individuos[j].valor
 	})
 
-	// seleciona os nMelhores indivíduos
+	// seleciona os n Melhores indivíduos
 	melhores := make([][]int, nMelhores)
 	for i := 0; i < nMelhores; i++ {
 		melhores[i] = individuos[i].arranjo
