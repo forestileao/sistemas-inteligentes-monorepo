@@ -8,6 +8,31 @@ import (
 	"time"
 )
 
+func generateKnapsackConfig(n int) ([]int, []int, int) {
+	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// Inicializa arrays de valores e tamanhos
+	values := make([]int, n)
+	sizes := make([]int, n)
+
+	// Define os valores e tamanhos aleatórios para cada item
+	for i := 0; i < n; i++ {
+		values[i] = aleatorio.Intn(100) + 1 // Valor entre 1 e 100
+		sizes[i] = aleatorio.Intn(50) + 1   // Tamanho entre 1 e 50
+	}
+
+	// Calcula a soma dos tamanhos para definir o limite da mochila
+	totalSize := 0
+	for _, size := range sizes {
+		totalSize += size
+	}
+
+	// Define a capacidade máxima como uma fração (ex.: 50%) da soma total dos tamanhos
+	maxWeight := int(float64(totalSize) * 0.5)
+
+	return values, sizes, maxWeight
+}
+
 // valorTotalTamanho calcula o valor total e o tamanho total dos itens selecionados no arranjo.
 // Retorna zero para o valor se o tamanho total exceder o tamanho máximo permitido.
 func valorTotalTamanho(arranjo []int, valores []int, tamanhos []int, tamanhoMaximo int) (int, int) {
@@ -35,20 +60,7 @@ func adjacente(arranjo []int, aleatorio *rand.Rand) []int {
 	return resultado
 }
 
-// resfriar calcula a nova temperatura com base na temperatura atual e no fator fatorResfriamento.
-// Retorna zero se a nova temperatura for menor que 0.0001.
-func resfriar(temperaturaAtual, fatorResfriamento float64) float64 {
-	novaTemperatura := temperaturaAtual * fatorResfriamento
-
-	if novaTemperatura < 0.0001 {
-		novaTemperatura = 0
-	}
-
-	return novaTemperatura
-}
-
-func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int, temperaturaInicial, fatorResfriamento float64) []int {
-	temperaturaAtual := temperaturaInicial
+func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int) []int {
 	solucao := make([]int, nItens)
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
@@ -62,7 +74,7 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 	fmt.Println("-----------------------------------------")
 
 	// Itera até a temperatura atingir zero
-	for iteracao := 0; temperaturaAtual > 0; iteracao++ {
+	for iteracao := 0; temperatura(iteracao) > 0.0001; iteracao++ {
 		arranjoAdjacente := adjacente(solucao, aleatorio)
 		valorAdjacente, _ := valorTotalTamanho(arranjoAdjacente, valores, tamanhos, tamanhoMaximo)
 
@@ -79,7 +91,7 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 			}
 
 		} else {
-			probAceitar := math.Exp(float64(delta_e) / temperaturaAtual)
+			probAceitar := math.Exp(float64(delta_e) / temperatura(iteracao))
 
 			if rand.Float64() < probAceitar {
 				solucao = arranjoAdjacente
@@ -93,11 +105,8 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 		}
 
 		if iteracao%10 == 0 {
-			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperaturaAtual)
+			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperatura(iteracao))
 		}
-
-		temperaturaAtual = resfriar(temperaturaAtual, fatorResfriamento)
-
 	}
 
 	return melhorSolucao
@@ -115,25 +124,48 @@ func printTabela(valores, tamanhos []int, arranjo []int) {
 	}
 }
 
+func temperaturaLinear(x int) float64 {
+	return 1000.0 - float64(x)
+}
+
+func temperatura1(x int) float64 {
+	return 1000.0 * math.Pow(10, -3.0*float64(x)/1000.0)
+}
+
+func temperatura2(x int) float64 {
+	return -0.001*math.Pow(float64(x), 2) + 750
+}
+
+func temperatura(x int) float64 {
+	return temperatura1(x)
+}
+
 func main() {
-	valores := []int{95, 75, 60, 85, 40, 120, 30, 65, 50, 90}
-	tamanhos := []int{50, 40, 30, 55, 25, 60, 35, 45, 40, 50}
-	tamanhoMaximo := 300
+	var valores, tamanhos []int
+	var tamanhoMaximo int
+
+	// Tenta carregar configuração existente, se não, gera nova
+	config, err := loadConfig()
+	if err == nil {
+		valores = config.Valores
+		tamanhos = config.Tamanhos
+		tamanhoMaximo = config.TamanhoMaximo
+	} else {
+		valores, tamanhos, tamanhoMaximo = generateKnapsackConfig(50)
+		saveConfig(MochilaConfig{valores, tamanhos, tamanhoMaximo})
+	}
 
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
-	var temperaturaInicial float64 = 1000
-	fatorResfriamento := 0.998
 
 	fmt.Printf("Tamanho máximo da mochila = %d\n", tamanhoMaximo)
-	fmt.Printf("Temperatura inicial = %.1f\n", temperaturaInicial)
-	fmt.Printf("Fator de Resfriamento = %.2f\n", fatorResfriamento)
+	fmt.Printf("Temperatura inicial = %.1f\n", temperatura(0))
 
 	fmt.Println("\nInício da demonstração de têmpera simulada com mochila")
 
 	fmt.Println("\nValores e tamanhos dos itens:")
 	printTabela(valores, tamanhos, make([]int, len(valores)))
 
-	solucao := temperaSimulada(10, aleatorio, valores, tamanhos, tamanhoMaximo, temperaturaInicial, fatorResfriamento)
+	solucao := temperaSimulada(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo)
 	fmt.Println("\n\nSolução encontrada:")
 	printTabela(valores, tamanhos, solucao)
 

@@ -8,6 +8,31 @@ import (
 	"time"
 )
 
+func generateKnapsackConfig(n int) ([]int, []int, int) {
+	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// Inicializa arrays de valores e tamanhos
+	values := make([]int, n)
+	sizes := make([]int, n)
+
+	// Define os valores e tamanhos aleatórios para cada item
+	for i := 0; i < n; i++ {
+		values[i] = aleatorio.Intn(100) + 1 // Valor entre 1 e 100
+		sizes[i] = aleatorio.Intn(50) + 1   // Tamanho entre 1 e 50
+	}
+
+	// Calcula a soma dos tamanhos para definir o limite da mochila
+	totalSize := 0
+	for _, size := range sizes {
+		totalSize += size
+	}
+
+	// Define a capacidade máxima como uma fração (ex.: 50%) da soma total dos tamanhos
+	maxWeight := int(float64(totalSize) * 0.5)
+
+	return values, sizes, maxWeight
+}
+
 func valorTotalTamanho(arranjo []int, valores []int, tamanhos []int, tamanhoMaximo int) (int, int) {
 	valor := 0
 	tamanho := 0
@@ -108,7 +133,7 @@ func selecionarMelhores(populacao [][]int, valores, tamanhos []int, tamanhoMaxim
 
 // algGenetico executa o algoritmo genético para o problema da mochila.
 func algGenetico(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo, tamanhoPopulacao, maxGeracoes int) []int {
-	probabilidadeMutacao := 0.05
+	probabilidadeMutacao := 0.01
 
 	populacao := gerarPopulacaoInicial(tamanhoPopulacao, nItens, aleatorio)
 
@@ -152,11 +177,22 @@ func algGenetico(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int
 }
 
 func main() {
-	valores := []int{95, 75, 60, 85, 40, 120, 30, 65, 50, 90}
-	tamanhos := []int{50, 40, 30, 55, 25, 60, 35, 45, 40, 50}
-	tamanhoMaximo := 300
-	tamanhoPopulacao := 15
-	maxGeracoes := 100
+	tamanhoPopulacao := 20
+	maxGeracoes := 1000
+
+	var valores, tamanhos []int
+	var tamanhoMaximo int
+
+	// Tenta carregar configuração existente, se não, gera nova
+	config, err := loadConfig()
+	if err == nil {
+		valores = config.Valores
+		tamanhos = config.Tamanhos
+		tamanhoMaximo = config.TamanhoMaximo
+	} else {
+		valores, tamanhos, tamanhoMaximo = generateKnapsackConfig(10)
+		saveConfig(MochilaConfig{valores, tamanhos, tamanhoMaximo})
+	}
 
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
 
