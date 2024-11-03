@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
@@ -60,7 +62,7 @@ func adjacente(arranjo []int, aleatorio *rand.Rand) []int {
 	return resultado
 }
 
-func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int) []int {
+func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int) ([]int, []int) {
 	solucao := make([]int, nItens)
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
@@ -70,8 +72,8 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 	valorAtual, _ := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
 	valorMelhorSolucao := valorAtual
 
-	fmt.Printf("\n%-15s %-15s %-15s\n", "Iteração", "Valor Atual", "Temperatura")
-	fmt.Println("-----------------------------------------")
+	// fmt.Printf("\n%-15s %-15s %-15s\n", "Iteração", "Valor Atual", "Temperatura")
+	// fmt.Println("-----------------------------------------")
 
 	// Itera até a temperatura atingir zero
 	for iteracao := 0; temperatura(iteracao) > 0.0001; iteracao++ {
@@ -104,12 +106,12 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 			}
 		}
 
-		if iteracao%10 == 0 {
-			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperatura(iteracao))
-		}
+		// if iteracao%10 == 0 {
+		// 	fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperatura(iteracao))
+		// }
 	}
-
-	return melhorSolucao
+	ultimaSolucao := solucao
+	return melhorSolucao, ultimaSolucao
 }
 
 func printTabela(valores, tamanhos []int, arranjo []int) {
@@ -137,7 +139,16 @@ func temperatura2(x int) float64 {
 }
 
 func temperatura(x int) float64 {
-	return temperatura1(x)
+	return temperatura2(x)
+}
+
+type Resultado struct {
+	ValorUltimo   int
+	TamanhoUltimo int
+	ValorMelhor   int
+	TamanhoMelhor int
+	MelhorSolucao []int
+	UltimaSolucao []int
 }
 
 func main() {
@@ -160,17 +171,41 @@ func main() {
 	fmt.Printf("Tamanho máximo da mochila = %d\n", tamanhoMaximo)
 	fmt.Printf("Temperatura inicial = %.1f\n", temperatura(0))
 
-	fmt.Println("\nInício da demonstração de têmpera simulada com mochila")
+	resultados := []Resultado{}
 
-	fmt.Println("\nValores e tamanhos dos itens:")
-	printTabela(valores, tamanhos, make([]int, len(valores)))
+	// Dentro do loop, adicione os resultados em vez de sobrescrever elementos:
+	for i := 0; i < 1000; i++ {
+		melhorSolucao, ultimaSolucao := temperaSimulada(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo)
 
-	solucao := temperaSimulada(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo)
-	fmt.Println("\n\nSolução encontrada:")
-	printTabela(valores, tamanhos, solucao)
+		valorMelhor, tamanhoMelhor := valorTotalTamanho(melhorSolucao, valores, tamanhos, tamanhoMaximo)
+		valorUltimo, tamanhoUltimo := valorTotalTamanho(ultimaSolucao, valores, tamanhos, tamanhoMaximo)
 
-	valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
+		resultado := Resultado{
+			ValorUltimo:   valorUltimo,
+			TamanhoUltimo: tamanhoUltimo,
+			ValorMelhor:   valorMelhor,
+			TamanhoMelhor: tamanhoMelhor,
+			MelhorSolucao: melhorSolucao,
+			UltimaSolucao: ultimaSolucao,
+		}
+		// Adicione o resultado ao slice
+		resultados = append(resultados, resultado)
+	}
 
-	fmt.Printf("\nValor total da solucao = %d\n", valor)
-	fmt.Printf("Tamanho total da solucao = %d\n", tamanho)
+	// Serializa os resultados para JSON
+	file, err := os.Create("resultados.json")
+	if err != nil {
+		fmt.Println("Erro ao criar o arquivo:", err)
+		return
+	}
+	defer file.Close()
+
+	// serialize to json
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "    ")
+	err = encoder.Encode(resultados)
+	if err != nil {
+		fmt.Println("Erro ao serializar para JSON:", err)
+		return
+	}
 }
