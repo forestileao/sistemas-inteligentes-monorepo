@@ -1,12 +1,22 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
+
+type IterationData struct {
+	Iteracao      int     `json:"iteracao"`
+	ValorAtual    int     `json:"valor_atual"`
+	Temperatura   float64 `json:"temperatura"`
+	MelhorSolucao []int   `json:"melhor_solucao"`
+	Execucao      int     `json:"execucao"`
+}
 
 func generateKnapsackConfig(n int) ([]int, []int, int) {
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -60,7 +70,7 @@ func adjacente(arranjo []int, aleatorio *rand.Rand) []int {
 	return resultado
 }
 
-func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int) []int {
+func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo int, execucao int) ([]int, []IterationData) {
 	solucao := make([]int, nItens)
 	for i := 0; i < nItens; i++ {
 		solucao[i] = 0
@@ -69,6 +79,8 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 
 	valorAtual, _ := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
 	valorMelhorSolucao := valorAtual
+
+	resultados := []IterationData{}
 
 	fmt.Printf("\n%-15s %-15s %-15s\n", "Iteração", "Valor Atual", "Temperatura")
 	fmt.Println("-----------------------------------------")
@@ -89,7 +101,6 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 				melhorSolucao = solucao
 				valorMelhorSolucao = valorAtual
 			}
-
 		} else {
 			probAceitar := math.Exp(float64(delta_e) / temperatura(iteracao))
 
@@ -107,9 +118,18 @@ func temperaSimulada(nItens int, aleatorio *rand.Rand, valores []int, tamanhos [
 		if iteracao%10 == 0 {
 			fmt.Printf("%-15d %-15d %-15.2f\n", iteracao, valorAtual, temperatura(iteracao))
 		}
+
+		// Adiciona os dados da iteração no slice resultados
+		resultados = append(resultados, IterationData{
+			Iteracao:      iteracao,
+			ValorAtual:    valorAtual,
+			Temperatura:   temperatura(iteracao),
+			MelhorSolucao: append([]int{}, melhorSolucao...),
+			Execucao:      execucao,
+		})
 	}
 
-	return melhorSolucao
+	return melhorSolucao, resultados
 }
 
 func printTabela(valores, tamanhos []int, arranjo []int) {
@@ -144,33 +164,45 @@ func main() {
 	var valores, tamanhos []int
 	var tamanhoMaximo int
 
-	// Tenta carregar configuração existente, se não, gera nova
-	config, err := loadConfig()
-	if err == nil {
-		valores = config.Valores
-		tamanhos = config.Tamanhos
-		tamanhoMaximo = config.TamanhoMaximo
-	} else {
-		valores, tamanhos, tamanhoMaximo = generateKnapsackConfig(50)
-		saveConfig(MochilaConfig{valores, tamanhos, tamanhoMaximo})
-	}
-
+	// Gera nova configuração
+	valores, tamanhos, tamanhoMaximo = generateKnapsackConfig(50)
 	aleatorio := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	resultadosTotais := []IterationData{}
 
 	fmt.Printf("Tamanho máximo da mochila = %d\n", tamanhoMaximo)
 	fmt.Printf("Temperatura inicial = %.1f\n", temperatura(0))
 
 	fmt.Println("\nInício da demonstração de têmpera simulada com mochila")
 
-	fmt.Println("\nValores e tamanhos dos itens:")
-	printTabela(valores, tamanhos, make([]int, len(valores)))
+	for execucao := 1; execucao <= 2; execucao++ {
+		fmt.Println("\nValores e tamanhos dos itens:")
+		printTabela(valores, tamanhos, make([]int, len(valores)))
 
-	solucao := temperaSimulada(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo)
-	fmt.Println("\n\nSolução encontrada:")
-	printTabela(valores, tamanhos, solucao)
+		solucao, resultados := temperaSimulada(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo, execucao)
+		resultadosTotais = append(resultadosTotais, resultados...)
 
-	valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
+		fmt.Println("\n\nSolução encontrada:")
+		printTabela(valores, tamanhos, solucao)
 
-	fmt.Printf("\nValor total da solucao = %d\n", valor)
-	fmt.Printf("Tamanho total da solucao = %d\n", tamanho)
+		valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
+
+		fmt.Printf("\nValor total da solucao = %d\n", valor)
+		fmt.Printf("Tamanho total da solucao = %d\n", tamanho)
+	}
+
+	// Serializa os resultados em JSON
+	jsonData, err := json.MarshalIndent(resultadosTotais, "", "  ")
+	if err != nil {
+		fmt.Println("Erro ao gerar JSON:", err)
+		return
+	}
+
+	// Salva o JSON em um arquivo
+	err = os.WriteFile("resultados.json", jsonData, 0644)
+	if err != nil {
+		fmt.Println("Erro ao salvar o arquivo JSON:", err)
+		return
+	}
+	fmt.Println(string(jsonData))
 }
