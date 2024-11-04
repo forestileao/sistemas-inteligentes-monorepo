@@ -6,6 +6,7 @@ graficos = [
     'resultados_exponencial.json',
     'resultados_linear.json',
     'resultados_quadratica.json',
+    'resultados_sigmoidal.json'
 ]
 
 for grafico in graficos:

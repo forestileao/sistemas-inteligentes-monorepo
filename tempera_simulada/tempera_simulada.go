@@ -138,8 +138,18 @@ func temperatura2(x int) float64 {
 	return -0.001*math.Pow(float64(x), 2) + 750
 }
 
+func temperaturaSigmoidalInvertida(x int) float64 {
+	// Defina os parâmetros para a curva sigmoidal
+	T0 := 1000.0   // Temperatura inicial
+	alpha := 0.001 // Taxa de transição da curva
+	k_m := 100     // Ponto médio da transição
+
+	// Função sigmoidal invertida
+	return T0 / (1 + math.Exp(alpha*(float64(x)-float64(k_m))))
+}
+
 func temperatura(x int) float64 {
-	return temperatura2(x)
+	return temperaturaSigmoidalInvertida(x)
 }
 
 type Resultado struct {
