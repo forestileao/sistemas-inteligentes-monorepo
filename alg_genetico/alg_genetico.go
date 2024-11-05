@@ -1,11 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"sort"
 	"strings"
 	"time"
+)
+
+// gere constantes para o tamanho da população e o número de gerações, probabilidades de cruzamento e mutação e numero de selecionados
+const (
+	tamanhoPopulacao = 20
+	nGeracoes        = 1000
+	probMutacao      = 0.01
+	selecionados     = 5
 )
 
 func generateKnapsackConfig(n int) ([]int, []int, int) {
@@ -62,6 +72,7 @@ func printTabela(valores, tamanhos []int, arranjo []int) {
 
 func gerarPopulacaoInicial(tamanhoPopulacao, nItens int, aleatorio *rand.Rand) [][]int {
 	populacao := make([][]int, tamanhoPopulacao)
+
 	for i := 0; i < tamanhoPopulacao; i++ {
 		populacao[i] = make([]int, nItens)
 		for j := 0; j < nItens; j++ {
@@ -133,13 +144,15 @@ func selecionarMelhores(populacao [][]int, valores, tamanhos []int, tamanhoMaxim
 
 // algGenetico executa o algoritmo genético para o problema da mochila.
 func algGenetico(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int, tamanhoMaximo, tamanhoPopulacao, maxGeracoes int) []int {
-	probabilidadeMutacao := 0.01
+	probabilidadeMutacao := probMutacao
+	var melhorAtual []int
 
 	populacao := gerarPopulacaoInicial(tamanhoPopulacao, nItens, aleatorio)
 
 	for geracao := 0; geracao < maxGeracoes; geracao++ {
-		nMelhores := tamanhoPopulacao / 2
+		nMelhores := selecionados
 		melhores := selecionarMelhores(populacao, valores, tamanhos, tamanhoMaximo, nMelhores)
+		melhorAtual = melhores[0]
 
 		var novaPopulacao [][]int
 
@@ -154,31 +167,31 @@ func algGenetico(nItens int, aleatorio *rand.Rand, valores []int, tamanhos []int
 			novaPopulacao = append(novaPopulacao, mutacao(filho2, aleatorio, probabilidadeMutacao))
 		}
 
-		// Se sobrar um melhor indivíduo, ele é adicionado sem crossover
-		if len(melhores)%2 != 0 {
-			novaPopulacao = append(novaPopulacao, melhores[len(melhores)-1])
-		}
-
-		// Se a nova população não atingir o tamanho original, aplicar mutações nos melhores
+		// preenche o restante da população com indivíduos mutados
 		for len(novaPopulacao) < tamanhoPopulacao {
-			// Seleciona um dos melhores para aplicar mutação
-			melhorIndividuo := melhores[aleatorio.Intn(len(melhores))]
-			individuoMutado := mutacao(append([]int(nil), melhorIndividuo...), aleatorio, probabilidadeMutacao) // Aplica mutação
+			individuoMutado := mutacao(append([]int(nil), melhorAtual...), aleatorio, probabilidadeMutacao) // Aplica mutação
 			novaPopulacao = append(novaPopulacao, individuoMutado)
 		}
 
 		populacao = novaPopulacao
-
-		fmt.Printf("Geração %d concluida.\n", geracao+1)
 	}
 
 	melhores := selecionarMelhores(populacao, valores, tamanhos, tamanhoMaximo, 1)
-	return melhores[0]
+
+	if fitness(melhores[0], valores, tamanhos, tamanhoMaximo) > fitness(melhorAtual, valores, tamanhos, tamanhoMaximo) {
+		return melhores[0]
+	}
+	return melhorAtual
+}
+
+type Resultado struct {
+	ValorMelhor   int
+	TamanhoMelhor int
+	MelhorSolucao []int
 }
 
 func main() {
-	tamanhoPopulacao := 20
-	maxGeracoes := 1000
+	maxGeracoes := nGeracoes
 
 	var valores, tamanhos []int
 	var tamanhoMaximo int
@@ -200,16 +213,36 @@ func main() {
 
 	fmt.Println("\nInício da demonstração de algoritmo genético com mochila")
 
-	fmt.Println("\nValores e tamanhos dos itens:")
-	printTabela(valores, tamanhos, make([]int, len(valores)))
+	resultados := []Resultado{}
 
-	solucao := algGenetico(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo, tamanhoPopulacao, maxGeracoes)
+	// Dentro do loop, adicione os resultados em vez de sobrescrever elementos:
+	for i := 0; i < 1000; i++ {
+		solucao := algGenetico(len(valores), aleatorio, valores, tamanhos, tamanhoMaximo, tamanhoPopulacao, maxGeracoes)
+		valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
 
-	fmt.Println("\n\nSolução encontrada:")
-	printTabela(valores, tamanhos, solucao)
+		resultado := Resultado{
+			ValorMelhor:   valor,
+			TamanhoMelhor: tamanho,
+			MelhorSolucao: solucao,
+		}
+		// Adicione o resultado ao slice
+		resultados = append(resultados, resultado)
+	}
 
-	valor, tamanho := valorTotalTamanho(solucao, valores, tamanhos, tamanhoMaximo)
+	// Serializa os resultados para JSON
+	file, err := os.Create("resultados.json")
+	if err != nil {
+		fmt.Println("Erro ao criar o arquivo:", err)
+		return
+	}
+	defer file.Close()
 
-	fmt.Printf("\nValor total da solução = %d\n", valor)
-	fmt.Printf("Tamanho total da solução = %d\n", tamanho)
+	// serialize to json
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "    ")
+	err = encoder.Encode(resultados)
+	if err != nil {
+		fmt.Println("Erro ao serializar para JSON:", err)
+		return
+	}
 }
